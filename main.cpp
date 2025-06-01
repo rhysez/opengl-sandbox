@@ -33,6 +33,8 @@ int main() {
 
     unsigned int VBO, VAO, EBO;
 
+    //--- Buffers and attribute pointer config ---//
+    // 
     // Set up EBO so we can bind it to each VAO.
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -50,6 +52,39 @@ int main() {
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
+    // texture attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    //--- Texture config ---//
+
+    unsigned int texture1;
+
+    // Generate texture, set and bind active texture to GL_TEXTURE_2D, configure wrapping/filtering.
+    glGenTextures(1, &texture1);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // nrChannels are colour channels.
+    int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char* textureData = stbi_load("grass_block.png", &width, &height, &nrChannels, 0);
+    if (textureData) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else {
+        std::cout << "STBI ERROR: " << stbi_failure_reason() << "\n";
+    }
+    stbi_image_free(textureData);
+
+    shader.use();
+    shader.setInt("texture1", 0);
+
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -57,16 +92,13 @@ int main() {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        shader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
 
-        int vertexColorLocation = glGetUniformLocation(shader.ID, "globalColor");
-        glUniform4f(vertexColorLocation, 0.4f, 1.0f, 0.8f, 1.0f);
+        shader.use();
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        vertexColorLocation = glGetUniformLocation(shader.ID, "globalColor");
-        glUniform4f(vertexColorLocation, 0.1f, 1.0f, 0.8f, 1.0f);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
